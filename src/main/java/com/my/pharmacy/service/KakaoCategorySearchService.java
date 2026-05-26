@@ -1,6 +1,8 @@
 package com.my.pharmacy.service;
 
+import com.my.pharmacy.dto.DocumentDto;
 import com.my.pharmacy.dto.KakaoApiResponseDto;
+import com.my.pharmacy.dto.OutputDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -11,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -56,5 +59,45 @@ public class KakaoCategorySearchService {
                         httpEntity,
                         KakaoApiResponseDto.class
                 ).getBody();
+    }
+
+    // documentList를 받아서 OutputDto의 리스트로 변환
+    // 각 documentList 안에있는 DocumentDto -> OutputDto 변환 후
+    // 다시 OutputDto 리스트에 저장
+    public List<OutputDto> makeOutputDto(
+            List<DocumentDto> documentList
+    ) {
+        // 전체 15개의 리스트가 들어온다... 그 중 5개 출력
+        return documentList
+                .stream()
+                .map(x -> convertToOutputDto(x))
+                .limit(5)
+                .toList();
+    }
+
+
+    // 각각의 DocumentDto를 꺼내서 OutputDto 변환
+    private OutputDto convertToOutputDto(DocumentDto document){
+        // 길찾기 URL을 변수
+        String DIRECTION_URL = "https://map.kakao.com/link/map/";
+        // 로드뷰 URL을 변수
+        String ROAD_VIEW_URL = "https://map.kakao.com/link/roadview/";
+        String params = String.join(",", document.getPlaceName(),
+                String.valueOf(document.getLatitude()),
+                String.valueOf(document.getLongitude())
+                );
+        String mapUrl = UriComponentsBuilder
+                .fromUriString(DIRECTION_URL + params)
+                .toUriString();
+
+        String roadUrl = ROAD_VIEW_URL + document.getLatitude() + "," + document.getLongitude();
+        return OutputDto.builder()
+                .pharmacyName(document.getPlaceName())
+                .pharmacyAddress(document.getAddressName())
+                .pharmacyPhone(document.getPhone())
+                .distance(document.getDistance())
+                .directionURL(mapUrl)
+                .roadViewURL(roadUrl)
+                .build();
     }
 }
